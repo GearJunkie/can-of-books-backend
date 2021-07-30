@@ -1,12 +1,15 @@
 'use strict';
 
 require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
-const jwt = require('jsonwebtoken');
-const jwksClient = require('jwks-rsa');
 const mongoose = require('mongoose');
+const Book = require('./modules/book.js')
 const User = require('./models/User.js');
+// const getKey = require('../lib/getKey.js');
+
+// const Book = require('./rout-handlers/book.js');
 
 const app = express();
 app.use(cors());
@@ -19,55 +22,60 @@ mongoose.connect(process.env.MONGODB_URI, mongooseOptions).then( () => {
   console.log('test success');
 });
 
-const client = jwksClient({
-  jwksUri: 'https://dev-pj8m-sfw.us.auth0.com/.well-known/jwks.json'
-});
-
-function getKey(header, callback){
-  client.getSigningKey(header.kid, function(err, key) {
-    var signingKey = key.publicKey || key.rsaPublicKey;
-    callback(null, signingKey);
-  });
-}
+//========== Auth/Start ==========//
 
 app.get('/test', (req, res) => {
-  const token = req.headers.authorization.split(' ')[1];
-  jwt.verify(token, getKey, {}, function(err, user) {
-    if (err) {
-      res.send('invalid token - you cannot access this route');
-    } else {
-      res.json({ 'token': token })
-    }
-  });
+   
+  // const token = req.headers.authorization.split(' ')[1];
+  // jwt.verify(token, getKey, {}, function(err, user) {
+  //   if (err) {
+  //     res.send('invalid token - you cannot access this route');
+  //   } else {
+  //     res.json({ 'token': token })
+  //   }
+  // });
 });
 
-app.get('/books', getAllBooks);
+//========== Auth/End ==========//
 
-function getAllBooks(req, res) {
-  User.find({})
-  .then(books => {
-    res.json(books);
-  })
-}
+app.get('/books', Book.list);
+app.post('/books', Book.add);
+app.put('/books/:id', Book.update);
+app.delete('/books/:id', Book.delete);
 
-app.post('/books', (req, res) => {
-  let newUser = new User(req.body);
-  newUser.save()
-    .then(result => {
-      res.json(result);
-    })
-})
+// app.get('/books', getAllBooks);
+// function getAllBooks(req, res) {
+//   User.find({})
+//   .then(books => {
+//     res.json(books);
+//   })
+// }
 
-app.delete('/books/:id', (req, res) => {
-  let id = req.params.id;
-  User.findByIdAndDelete(id)
-  .then(() => res.json({ msg: 'book deleted' }))
-  .catch(err => console.error(err));
-});
+// app.post('/books', (req, res) => {
+//   let newUser = new User(req.body);
+//   newUser.save()
+//     .then(result => {
+//       res.json(result);
+//     })
+// });
+
+// app.put('/books/:id', (req, res) => {
+//   let id = req.params.id;
+//   User.findByIdAndUpdate(id)
+//   .then(() => res.json({ msg: 'book updated' }))
+//   .catch(err => console.error(err));
+// });
+
+// app.delete('/books/:id', (req, res) => {
+//   let id = req.params.id;
+//   User.findByIdAndDelete(id)
+//   .then(() => res.json({ msg: 'book deleted' }))
+//   .catch(err => console.error(err));
+// });
 
 //==================== Models ========================//
 
-let jesse = new User({ name: 'jesse', email: "jessdills@gmail.com", books: [{ name: "Hunger Games", description: "Brutal Teenage Warfare", status: "Have Read" }, { name: "Divergent", description: "Brutal Teenage Warfare Pt.2", status: "Have Read"}, { name: "Divergent", description: "Brutal Teenage Warfare Pt.3", status: "Have Not Read" }]
+let jesse = new User({ name: 'jesse', email: "jessdills@gmail.com", books: [{ name: "Hunger Games", description: "Brutal Teenage Warfare", status: "read", img: 'url'}, { name: "Divergent", description: "Brutal Teenage Warfare Pt.2", status: "currently reading", img: 'url'}, { name: "Divergent", description: "Brutal Teenage Warfare Pt.3", status: "favorite", img: 'url' }]
 })
 jesse.save();
 
@@ -81,5 +89,8 @@ jesse.save();
 
 //====================================================//
 
+app.use('*', (req, res) => {
+  res.status(404).send('route not found');
+});
 
 app.listen(PORT, () => console.log(`listening on ${PORT}`));
