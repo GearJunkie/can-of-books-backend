@@ -6,88 +6,60 @@ const User = require('../models/User.js');
 
 const Book = {};
 
-Book.list = (req, res) => {
-  const token = req.headers.authorization.split(' ')[1];
+//===================================================//
 
-  jwt.verify(token, getKey, {}, async function(err, user) {
+Book.profile = (req, res) => {
+  const token = req.headers.authorization.split(' ')[1];
+  jwt.verify(token, getKey, {}, function(err, user) {
     if (err) {
-      res.send('invalid user')
+      res.send('invalid token - you cannot access this route');
     } else {
-      const email = req.query.email;
-      await User.find({ email }, (err, user) => {
-        if (err) {
-          res.send('invalid user')
-        } else {
-          res.send(user.books);
-        }
-      })
+      res.json({ 'token': token })
     }
   })
-
 }
+
+//===================================================//
+
+Book.list = (req, res) => {
+  User.find({})
+  .then(books => {
+    res.json(books);
+  })
+}
+
+//===================================================//
 
 Book.add = (req, res) => {
-  
-  const token = req.headers.authorization.split(' ')[1];
-  
-  jwt.verify(token, getKey, {}, async function(err, user) {
-    if (err) {
-      res.send('invalid token - you cannot access this route')
-    } else {
-      const { email, name, description, status, img } = req.body;
-      const newBook = { name, description, status, img };
-    
-      await User.findOne({ email }, (err, user) => {
-        user.books.push(newBook);
-        user.save().then(() => {
-          res.send(user.books)
-        })
-        .catch(err => console.error(err))
-      })
-    }
-  })
+  const {email, name, description, status} = req.body;
+  User.findOne({email:email})
+  .then(user => {
+    console.log(user)
+    user.books.push(
+      {name:name, description:description, status:status}
+    )
+    user.save()
+    res.json(user);
+  }).catch(err => console.error(err))
 }
+//===================================================//
 
 Book.update = (req, res) => {
-  const token = req.headers.authorization.split(' ')[1];
-
-  jwt.verify(token, getKey, {}, async function(err, user) {
-    if (err) {
-      res.send('invalid user')
-    } else {
-      const id = req.params.id;
-      const email = req.params.id;
-      await User.findOne({ email }, (err, user) => {
-        const filtered = user.books.filter(book => book.id !== id);
-        user.books = filtered;
-        user.save();
-        res.send(filtered);
-      })
-    }
-  })
+  let id = req.arams.id;
+  User.findByIdAndUpdate(id)
+  .then(() => res.json({ msg: 'book updated' }))
+  .catch(err => console.error(err));
 }
+
+//=====================================================//
 
 Book.delete = (req, res) => {
-  const token = req.headers.authorization.split(' ')[1];
-
-  jwt.verify(token, getKey, {}, async function(err, user) {
-    if (err) {
-      res.send('invalid user')
-    } else {
-      const { email, name, description, status, img } = req.body;
-      const id = Number(req.params.id);
-
-      await User.findOne({ email }, (err, user) => {
-        const bookArr = user.books.map((book, i) => {
-          return book._id === id ? book = { name, description, status, img } : book;
-        });
-
-        user.books = bookArr;
-        user.save();
-        res.send(bookArr);
-      });
-    }
-  })
+  let id = req.params.id;
+  User.findByIdAndDelete(id)
+  .then(() => res.json({ msg: 'book deleted'}))
+  .catch(err => console.error(err));
 }
+
+//====================================================//
 
 module.exports = Book;
